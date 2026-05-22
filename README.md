@@ -1,129 +1,118 @@
-# rowhammer-clf
-# Flip to Win: A Virtual Rowhammer CTF Challenge
+# Flip-to-Win — Virtual Rowhammer CTF 
 
-## Overview
-
-This project is a Rowhammer-inspired CTF challenge built using:
-
-* **DRAMSim3** for realistic DRAM timing
-* A **custom Python Rowhammer model** (bit flips, TRR, PARA)
-* A TCP server, client, and automated solver
+A **cycle-accurate Rowhammer Capture-The-Flag challenge** powered by a DRAM simulator.  
+Exploit real DRAM disturbance effects to flip a protected kernel bit and escalate privileges.
 
 ---
 
-## Requirements
+##  Overview
 
-* Docker Desktop
+This project simulates a realistic **Rowhammer attack environment** using:
 
----
+- A TCP-based interactive CTF server  
+- A DRAM disturbance model (via DRAMSim3 backend)  
+- Modern defenses like **TRR** and **PARA**  
+- A staged exploitation path  
 
-## Run on a New System
-
-### 1. Open terminal in project folder
-
-```powershell
-cd "path\to\rowhammer-ctf"
-```
-
----
-
-### 2. Build Docker image
-
-```powershell
-docker build -t rowhammer-ctf .
-```
+Players must:
+1. Discover **virtual → physical memory layout**
+2. Identify **physically adjacent rows**
+3. Execute a **double-sided Rowhammer attack**
+4. Flip a **kernel-resident admin bit**
+5. Capture the final flag 
 
 ---
 
-### 3. Run container
+## Architecture
 
-```powershell
-docker run -it --name rowhammer-ctf-container -v "${PWD}:/project" rowhammer-ctf bash
-```
+### Components
+
+- `memory_server4.py` — Main server (game + DRAM simulation)
+- `client.py` — Interactive TCP client
+- `solve2.py` — Automated solver
 
 ---
 
-### 4. Build project inside container
+### System Design
+
+Each player connection gets:
+
+- **GameState**
+  - Randomized memory layout
+  - Virtual → Physical mapping
+  - Kernel row (hidden)
+  - Weak-cell distribution
+
+- **DRAMSim3 Engine**
+  - Tracks hammer counts (HC)
+  - Models DDR4 timing
+  - Implements:
+    - TRR (Target Row Refresh)
+    - PARA defense
+  - Simulates refresh cycles
+
+---
+
+## Objective
+
+Flip the **admin bit in kernel memory** using Rowhammer.
 
 ```bash
-cd /project
+GETFLAG
+```
+
+##  Gameplay Stages
+
+### Stage 1 — Mapping Discovery
+
+- Use `PROBE` to infer adjacency  
+- Probe ≥ 4 pages  
+
+**Unlocks:**
+```bash
+PAGEMAP
+```
+
+### Stage 2 — Double-Sided Hammering
+
+- Identify aggressor rows  
+- Alternate hammering  
+
+**Requirement:**
+- ≥ 3 alternating pairs  
+
+---
+
+### Stage 3 — Bit Flip
+
+- Sustain hammering  
+- Bypass defenses  
+- Flip admin bit  
+
+---
+
+## Commands
+
+```bash
+HELP
+INFO
+READ <vaddr>
+WRITE <vaddr> <value>
+DUMP <vaddr> <count>
+ASCII <vaddr> <count>
+PROBE <vaddr>
+HAMMER <vaddr>
+REFRESH
+STAGE1
+STAGE2
+GETFLAG
+```
+
+## Setup
+
+Run the provided build script to install and build dependencies:
+
+```bash
 chmod +x build.sh
 ./build.sh
 ```
-
----
-
-### 5. Set library path
-
-```bash
-export LD_LIBRARY_PATH=/project:$LD_LIBRARY_PATH
-```
-
----
-
-### 6. Start the server
-
-```bash
-python3 memory_server2.py
-```
-
-You should see:
-
-```
-[*] Flip-to-Win CTF server starting...
-```
-
----
-
-## Play the Challenge
-
-Open a new terminal:
-
-```powershell
-docker exec -it rowhammer-ctf-container bash
-```
-
-Then:
-
-```bash
-cd /project
-export LD_LIBRARY_PATH=/project:$LD_LIBRARY_PATH
-python3 client.py
-```
-
----
-
-## Run Solver (Recommended)
-
-```bash
-docker exec -it rowhammer-ctf-container bash
-cd /project
-export LD_LIBRARY_PATH=/project:$LD_LIBRARY_PATH
-python3 solve2.py
-```
-
----
-
-## Common Error
-
-### Error:
-
-```
-Unable to find image 'rowhammer-ctf:latest' locally
-```
-
-### Fix:
-
-```powershell
-docker build -t rowhammer-ctf .
-```
-
----
-
-## Notes
-
-* DRAMSim3 is automatically downloaded during build
-* Do not remove `build.sh`
-* Always set `LD_LIBRARY_PATH` before running
-
----
